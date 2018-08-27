@@ -4,7 +4,7 @@ const connectionString = process.env.DATABASE_URL || 'postgres://postgres:secret
 const sequelize = new Sequelize(connectionString, {define: { timestamps: false }})
 
 sequelize
-  .sync({force:true})
+  .sync()
   .then(() => {
     console.log('Sequelize updated database schema')
   })
