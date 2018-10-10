@@ -1,25 +1,35 @@
-const {Router} = require('express')
+const { Router } = require('express')
 const Customer = require('./model')
+const Company = require('../companies/model')
 
 const router = new Router()
 
 router.get('/customers', (req, res, next) => {
-  Customer
-    .findAll()
-    .then(customers => {
-      res.send({ customers })
+  const limit = Math.min(4, req.query.limit || 25)
+  const offset = req.query.offset || 0
+
+  Promise.all([
+    Customer.count(),
+    Customer.findAll({ limit, offset })
+  ])
+    .then(([total, customers]) => {
+      res.send({
+        customers, total
+      })
     })
     .catch(error => next(error))
 })
 
 router.get('/customers/:id', (req, res, next) => {
   Customer
-    .findById(req.params.id)
+    .findById(req.params.id, { include: [Company] })
     .then(customer => {
-      if (!customer) res.status(404).send({
-        message: `Customer does not exist`
-      })
-      res.send(customer)
+      if (!customer) {
+        return res.status(404).send({
+          message: `Customer does not exist`
+        })
+      }
+      return res.send(customer)
     })
     .catch(error => next(error))
 })
@@ -28,10 +38,12 @@ router.post('/customers', (req, res, next) => {
   Customer
     .create(req.body)
     .then(customer => {
-      if (!customer) res.status(404).send({
-        message: `Customer does not exist`
-      })
-      res.status(201).send(customer)
+      if (!customer) {
+        return res.status(404).send({
+          message: `Customer does not exist`
+        })
+      }
+      return res.status(201).send(customer)
     })
     .catch(error => next(error))
 })
@@ -40,10 +52,11 @@ router.put('/customers/:id', (req, res, next) => {
   Customer
     .findById(req.params.id)
     .then(customer => {
-      if (!customer) res.status(404).send({
-        message: `Customer does not exist`
-      })
-      
+      if (!customer) {
+        return res.status(404).send({
+          message: `Customer does not exist`
+        })
+      }
       return customer.update(req.body)
     })
     .then(customer => res.send(customer))
@@ -54,10 +67,11 @@ router.delete('/customers/:id', (req, res, next) => {
   Customer
     .findById(req.params.id)
     .then(customer => {
-      if (!customer) res.status(404).send({
-        message: `Customer does not exist`
-      })
-      
+      if (!customer) {
+        return res.status(404).send({
+          message: `Customer does not exist`
+        })
+      }
       return customer.destroy()
     })
     .then(() => res.send({
